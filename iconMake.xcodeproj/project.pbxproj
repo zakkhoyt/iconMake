@@ -241,6 +241,7 @@
 				C664FD4F1D93859600470511 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
