@@ -6,6 +6,8 @@
 //  Copyright © 2016 Zakk Hoyt. All rights reserved.
 //
 
+// NSTaskDidTerminateNotification
+
 import Foundation
 
 let executable = NSProcessInfo.processInfo().arguments[0]
@@ -15,7 +17,7 @@ if NSProcessInfo.processInfo().arguments.count < 3 {
     print("1.) <path_to_image> The path to a png file, preferrably 1024x1024 pixels.")
     print("2.) <path_to_output_dir> Path to a dir to output the files. The dir will be created if it doesn't exist. Files inside will be overwritten.")
     print("Example\t\(executable) <path_to_image> <path_to_output_dir>")
-    exit(-1)
+    exit(EXIT_FAILURE)
 }
 
 
@@ -31,7 +33,19 @@ let sourceImageURL = NSURL(fileURLWithPath: sourceImagePath)
 let outputDirURL = NSURL(fileURLWithPath: outputDirPath)
 
 
-func fileNameFromSize(size: String, scale: Double) -> String {
+//func fileNameFromSize(size: String, scale: Double) -> String {
+//    switch scale {
+//    case 2:
+//        return "icon_\(size)@2x.png"
+//    case 3:
+//        return "icon_\(size)@3x.png"
+//    default:
+//        return "icon_\(size).png"
+//    }
+//}
+
+func fileNameFromSize(value: Double, scale: Double) -> String {
+    let size = stringFrom(value)
     switch scale {
     case 2:
         return "icon_\(size)@2x.png"
@@ -40,6 +54,12 @@ func fileNameFromSize(size: String, scale: Double) -> String {
     default:
         return "icon_\(size).png"
     }
+}
+
+
+func stringFrom(value: Double) -> String {
+    // Return 20 or 83.5
+    return String(format: value == floor(value) ? "%.0f" : "%.1f", value)
 }
 
 func createImages() {
@@ -51,17 +71,20 @@ func createImages() {
         try NSFileManager.defaultManager().createDirectoryAtURL(outputDirURL, withIntermediateDirectories: true, attributes: nil)
     } catch let error as NSError {
         print("Error creating output dir: " + outputDirURL.absoluteString + " " + error.localizedDescription)
-        exit(-1)
+        exit(EXIT_FAILURE)
     }
     
     for scale in scales {
         
         let size = String(scale)
         do {
-            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size).png")
+            
+//            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size).png")
+            let fileName = fileNameFromSize(scale, scale: 1.0)
+            let outputURL = outputDirURL.URLByAppendingPathComponent(fileName)
             do {
                 try NSFileManager.defaultManager().removeItemAtURL(outputURL)
-            } catch let _ as NSError {
+            } catch {
                 //            print("Warning: Cannot remove output dir: " + outputURL.absoluteString)
             }
             let task = NSTask()
@@ -69,13 +92,17 @@ func createImages() {
             task.arguments = [sourceImagePath, "-z", String(scale), String(scale), "--out", outputURL.path!]
             task.launch()
             print("Resizing icon to " + outputURL.lastPathComponent!)
+            task.waitUntilExit()
         }
         
         do {
-            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size)@2x.png")
+//            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size)@2x.png")
+            let fileName = fileNameFromSize(scale, scale: 2.0)
+            let outputURL = outputDirURL.URLByAppendingPathComponent(fileName)
+
             do {
                 try NSFileManager.defaultManager().removeItemAtURL(outputURL)
-            } catch let _ as NSError {
+            } catch {
                 //            print("Warning: Cannot remove output dir: " + outputURL.absoluteString)
             }
             let task = NSTask()
@@ -83,13 +110,17 @@ func createImages() {
             task.arguments = [sourceImagePath, "-z", String(2*scale), String(2*scale), "--out", outputURL.path!]
             task.launch()
             print("Resizing icon to " + outputURL.lastPathComponent!)
+            task.waitUntilExit()
         }
         
         do {
-            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size)@3x.png")
+//            let outputURL = outputDirURL.URLByAppendingPathComponent("icon_\(size)@3x.png")
+            let fileName = fileNameFromSize(scale, scale: 3.0)
+            let outputURL = outputDirURL.URLByAppendingPathComponent(fileName)
+
             do {
                 try NSFileManager.defaultManager().removeItemAtURL(outputURL)
-            } catch let _ as NSError {
+            } catch {
                 //            print("Warning: Cannot remove output dir: " + outputURL.absoluteString)
             }
             
@@ -98,21 +129,41 @@ func createImages() {
             task.arguments = [sourceImagePath, "-z", String(3*scale), String(3*scale), "--out", outputURL.path!]
             task.launch()
             print("Resizing icon to " + outputURL.lastPathComponent!)
+            task.waitUntilExit()
         }
     }
 }
 
 func createAppIcon() {
     
+//    let tuples = [
+//        (29, [2, 3], "iphone"),
+//        (40, [2, 3], "iphone"),
+//        (60, [2, 3], "iphone"),
+//        (29, [1, 2], "ipad"),
+//        (40, [1, 2], "ipad"),
+//        (76, [1, 2], "ipad"),
+//        (83.5, [2], "ipad"),
+//        ]
+    
     let tuples = [
-        (29.0, [2, 3], "iphone"),
-        (40.0, [2, 3], "iphone"),
-        (60.0, [2, 3], "iphone"),
-        (29.0, [1, 2], "ipad"),
-        (40.0, [1, 2], "ipad"),
-        (76.0, [1, 2], "ipad"),
+        (29, [1, 2, 3], "iphone"),
+        (40, [2, 3], "iphone"),
+        (57, [1, 2], "iphone"),
+        (60, [2, 3], "iphone"),
+        (29, [1, 2], "ipad"),
+        (40, [1, 2], "ipad"),
+        (50, [1, 2], "ipad"),
+        (72, [1, 2], "ipad"),
+        (76, [1, 2], "ipad"),
         (83.5, [2], "ipad"),
+        (16, [1, 2], "mac"),
+        (32, [1, 2], "mac"),
+        (128, [1, 2], "mac"),
+        (256, [1, 2], "mac"),
+        (512, [1, 2], "mac"),
         ]
+
     
     
     // Create AppIcon dir
@@ -122,7 +173,7 @@ func createAppIcon() {
         try NSFileManager.defaultManager().createDirectoryAtURL(appIconURL, withIntermediateDirectories: true, attributes: nil)
     } catch let error as NSError {
         print("Error creating AppIcon dir: " + error.localizedDescription)
-        exit(-1)
+        exit(EXIT_FAILURE)
     }
     
     // Setup JSON
@@ -144,9 +195,11 @@ func createAppIcon() {
 
         for scale in scales {
             var image = [String: AnyObject]()
-            image["size"] = "\(Int(size))x\(Int(size))"
+            let sizeString = stringFrom(size)
+            image["size"] = "\(sizeString)x\(sizeString)"
             image["idiom"] = idiom
-            image["filename"] = fileNameFromSize(String(size), scale: Double(scale))
+            //image["filename"] = fileNameFromSize(String(size), scale: Double(scale))
+            image["filename"] = fileNameFromSize(size, scale: Double(scale))
             image["scale"] = "\(Int(scale))x"
             images.append(image)
         }
@@ -160,7 +213,6 @@ func createAppIcon() {
         try data.writeToURL(jsonURL, options: .AtomicWrite)
     } catch let error as NSError {
         print("Error writing json to Contents.json: " + error.localizedDescription)
-        exit(-1)
     }
     
     
@@ -172,7 +224,8 @@ func createAppIcon() {
         
         for scale in scales {
             //let fileName = "icon_\(name)@2x.png"
-            let fileName = fileNameFromSize(String(size), scale: Double(scale))
+            //let fileName = fileNameFromSize(String(size), scale: Double(scale))
+            let fileName = fileNameFromSize(size, scale: Double(scale))
             let source = outputDirURL.URLByAppendingPathComponent(fileName)
             let dest = appIconURL.URLByAppendingPathComponent(fileName)
             
@@ -183,14 +236,13 @@ func createAppIcon() {
             }
         }
     }
-    
-    
-    
 }
 
 
 createImages()
+
+usleep(5 * 1000 * 1000)
 createAppIcon()
 
 
-exit(0)
+exit(EXIT_SUCCESS)
